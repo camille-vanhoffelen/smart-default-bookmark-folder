@@ -1,5 +1,8 @@
 // background.js (or service worker)
-import { pipeline } from '@huggingface/transformers';
+import { pipeline, env } from '@huggingface/transformers';
+
+// Self-host WASM binaries for strict CSP
+env.backends.onnx.wasm.wasmPaths = browser.runtime.getURL('static/wasm/');
 
 class PipelineSingleton {
   static task = 'feature-extraction';
@@ -14,11 +17,20 @@ class PipelineSingleton {
 }
 
 async function embed(text) {
-  let model = await PipelineSingleton.getInstance((data) => {
-    console.log('progress', data)
-  });
-  const result = await model(text);
-  return result;
+  try {
+    let model = await PipelineSingleton.getInstance((data) => {
+      console.log('progress', data)
+    });
+    console.log('Model loaded:', model);
+    // TODO fix
+    // const result = await model(text);
+    const result = await model("This is a sentence, yay!");
+    console.log('Model result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error in embed function:', error);
+    return null;
+  }
 }
 
 async function getCurrentTabContent() {
@@ -58,7 +70,7 @@ async function handleCreated(id, bookmarkInfo) {
   const content = await getCurrentTabContent();
   if (content) {
     const embedding = await embed(content);
-    console.log("Embedding calculated:", embedding.length);
+    console.log("Embedding calculated:", embedding);
   }
 }
 

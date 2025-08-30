@@ -1,4 +1,14 @@
 {
+  "name": "smart-default-bookmark-folder",
+  "version": "0.0.1",
+  "description": "Guesses the best folder for new bookmarks.",
+  "scripts": {
+    "build": "webpack",
+    "dev": "webpack --watch"
+  },
+  "type": "module",
+  "author": "Camille Van Hoffelen",
+  "license": "MIT",
   "dependencies": {
     "@huggingface/transformers": "^3.7.2",
     "@mozilla/readability": "^0.6.0"

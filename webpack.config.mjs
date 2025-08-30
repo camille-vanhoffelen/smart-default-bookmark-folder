@@ -24,6 +24,10 @@ export default {
                 to: "icons"
             },
             {
+                from: "static",
+                to: "static"
+            },
+            {
                 from: "manifest.json",
                 to: "."
             }
