@@ -22,9 +22,7 @@ async function embed(text) {
       console.log('progress', data)
     });
     console.log('Model loaded:', model);
-    // TODO fix
-    // const result = await model(text);
-    const result = await model("This is a sentence, yay!");
+    const result = await model(text);
     console.log('Model result:', result);
     return result;
   } catch (error) {

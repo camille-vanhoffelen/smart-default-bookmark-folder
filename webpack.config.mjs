@@ -24,8 +24,12 @@ export default {
                 to: "icons"
             },
             {
-                from: "static",
-                to: "static"
+                from: 'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm',
+                to: 'static/wasm/[name][ext]'
+            },
+            {
+                from: 'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.mjs',
+                to: 'static/wasm/[name][ext]'
             },
             {
                 from: "manifest.json",

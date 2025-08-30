@@ -1,5 +1,12 @@
 # 📂 Smart Default Bookmark Folder
 
+## Development
+
+```bash
+npm run build
+web-ext run --source-dir=build --reload --pref intl.locale.requested=en-US --pref intl.accept_languages=en-US,en --bc
+```
+
 ## 😎 Credits
 
 * icon made from:
