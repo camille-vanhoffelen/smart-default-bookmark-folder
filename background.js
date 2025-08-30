@@ -1,5 +1,5 @@
 // background.js (or service worker)
-import { AutoModel, AutoTokenizer, Tensor, env } from '@huggingface/transformers';
+import { AutoModel, AutoTokenizer, Tensor, env, cos_sim } from '@huggingface/transformers';
 
 
 // Self-host WASM binaries for strict CSP
@@ -33,7 +33,7 @@ async function embed(texts) {
   if (!Array.isArray(texts) || texts.length === 0) {
     throw new Error('texts must be a non-empty array');
   }
-  
+
   try {
     const model = await ModelSingleton.getModelInstance((data) => {
       console.log('progress', data)
@@ -51,8 +51,8 @@ async function embed(texts) {
 
     const flattened_input_ids = input_ids.flat();
     const modelInputs = {
-        input_ids: new Tensor('int64', flattened_input_ids, [flattened_input_ids.length]),
-        offsets: new Tensor('int64', offsets, [offsets.length])
+      input_ids: new Tensor('int64', flattened_input_ids, [flattened_input_ids.length]),
+      offsets: new Tensor('int64', offsets, [offsets.length])
     };
 
     const { embeddings } = await model(modelInputs);
@@ -101,6 +101,11 @@ async function handleCreated(id, bookmarkInfo) {
   if (content) {
     const embeddings = await embed([content]);
     console.log("Embedding calculated:", embeddings);
+    
+    const referenceEmbeddings = await embed(['Vegetable']);
+    
+    const similarity = cos_sim(embeddings[0], referenceEmbeddings[0]);
+    console.log("Cosine similarity:", similarity);
   }
 }
 
