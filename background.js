@@ -1,127 +1,153 @@
-// background.js (or service worker)
-import { AutoModel, AutoTokenizer, Tensor, env, cos_sim } from '@huggingface/transformers';
+import { cos_sim } from '@huggingface/transformers';
+import {
+  getCurrentTabContent,
+  getDestinationEmbeddings,
+  initDestinationEmbeddings
+} from './bookmark-utils.js';
+import { embed, isEnoughContent } from './embedding.js';
+import { preloadModel } from './model.js';
 
-
-// Self-host WASM binaries for strict CSP
-env.backends.onnx.wasm.wasmPaths = browser.runtime.getURL('static/wasm/');
-
-class ModelSingleton {
-  static modelName = 'minishlab/potion-base-8M';
-  static modelConfig = {
-    config: { model_type: 'model2vec' },
-    revision: 'main',
-    dtype: 'fp32'
-  };
-  static tokenizerConfig = {
-    revision: 'main'
-  };
-  static model = null;
-  static tokenizer = null;
-
-  static async getModelInstance(progress_callback = null) {
-    this.model ??= AutoModel.from_pretrained(this.modelName, this.modelConfig, { progress_callback });
-    return this.model;
-  }
-
-  static async getTokenizerInstance(progress_callback = null) {
-    this.tokenizer ??= AutoTokenizer.from_pretrained(this.modelName, this.tokenizerConfig, { progress_callback });
-    return this.tokenizer;
-  }
-}
-
-async function embed(texts) {
-  if (!Array.isArray(texts) || texts.length === 0) {
-    throw new Error('texts must be a non-empty array');
-  }
-
-  try {
-    const model = await ModelSingleton.getModelInstance((data) => {
-      console.log('progress', data)
-    });
-    const tokenizer = await ModelSingleton.getTokenizerInstance((data) => {
-      console.log('progress', data)
-    });
-    console.log('Model loaded:', model);
-    console.log('Tokenizer loaded:', tokenizer);
-
-    const { input_ids } = await tokenizer(texts, { add_special_tokens: false, return_tensor: false });
-
-    const cumsum = arr => arr.reduce((acc, num, i) => [...acc, num + (acc[i - 1] || 0)], []);
-    const offsets = [0, ...cumsum(input_ids.slice(0, -1).map(x => x.length))];
-
-    const flattened_input_ids = input_ids.flat();
-    const modelInputs = {
-      input_ids: new Tensor('int64', flattened_input_ids, [flattened_input_ids.length]),
-      offsets: new Tensor('int64', offsets, [offsets.length])
-    };
-
-    const { embeddings } = await model(modelInputs);
-    return embeddings.tolist();
-  } catch (error) {
-    console.error('Error in embed function:', error);
-    return null;
-  }
-}
-
-async function getCurrentTabContent() {
-  const tabs = await browser.tabs.query({
-    currentWindow: true,
-    active: true,
-  });
-
-  if (tabs.length !== 1) return null;
-
-  return await getTabContent(tabs[0].id);
-}
-
-async function getTabContent(tabId) {
-  try {
-    const response = await browser.tabs.sendMessage(tabId, {
-      type: "extractTextContent"
-    });
-
-    if (response && response.textContent) {
-      console.log("Text content extracted:", response.textContent);
-      return response.textContent;
-    }
-    return null;
-  } catch (error) {
-    console.error(`Could not get tab content: ${error}`);
-    return null;
-  }
-}
+// Flag to disable smart relocation during seeding
+let isSeeding = false;
 
 async function handleCreated(id, bookmarkInfo) {
+  // Skip during seeding
+  if (isSeeding) {
+    console.log(`Skipping smart bookmark relocation: seeding`)
+    return;
+  }
+
+  if (bookmarkInfo.type === 'folder') {
+    console.log(`New bookmark folder, skipping smart bookmark relocation`);
+    return;
+  }
+
   console.log(`New bookmark ID: ${id}`);
   console.log(`New bookmark URL: ${bookmarkInfo.url}`);
   console.log(`New bookmark title: ${bookmarkInfo.title}`);
   console.log(`New bookmark parent ID: ${bookmarkInfo.parentId}`);
 
+  // TODO what if bookmark created for non-active tab? consider using URL instead? or bookmark info?
+  // Maybe search in open tabs for that url, and if not found, then open it on your own?
+  // Is that more robust than getting current open tab?
+
   const content = await getCurrentTabContent();
-  if (content) {
-    const embeddings = await embed([content]);
-    console.log("Embedding calculated:", embeddings);
-    
-    const referenceEmbeddings = await embed(['Vegetable']);
-    
-    const similarity = cos_sim(embeddings[0], referenceEmbeddings[0]);
-    console.log("Cosine similarity:", similarity);
+
+  if (!isEnoughContent(content)) {
+    console.log('Not enough text content, skipping smart bookmark relocation');
+    return;
   }
+
+  const destinations = await getDestinationEmbeddings(id);
+  if (destinations.length === 0) {
+    console.log('No destinations with embeddings found, skipping relocation');
+    return;
+  }
+
+  const embedResult = await embed([content]);
+  if (!embedResult || embedResult.length === 0) {
+    console.log('Failed to generate content embedding, skipping relocation');
+    return;
+  }
+
+  const contentEmbedding = embedResult[0];
+  console.log("Embedding calculated:", contentEmbedding);
+
+  // Calculate cosine similarity of contentEmbedding vs each destination.embedding
+  const similarities = destinations.map(destination => ({
+    ...destination,
+    similarity: cos_sim(contentEmbedding, destination.embedding)
+  })).filter(item => !isNaN(item.similarity));
+
+  // Sort by similarity (highest first)
+  similarities.sort((a, b) => b.similarity - a.similarity);
+
+  console.log('\n=== Top 30 most similar destinations ===');
+  for (let i = 0; i < Math.min(30, similarities.length); i++) {
+    const dest = similarities[i];
+    console.log(`${i + 1}. ${dest.id} (similarity: ${dest.similarity.toFixed(4)})`);
+  }
+
+  // Pick highest cosine similarity and relocate bookmark to that folderId
+  const bestMatch = similarities[0];
+  const targetFolderId = bestMatch.folderId;
+
+  console.log(`Relocating bookmark to folder ${targetFolderId} (similarity: ${bestMatch.similarity.toFixed(4)})`);
+  await browser.bookmarks.move(id, { parentId: targetFolderId });
 }
 
-// Preload model on extension startup
-async function preloadModel() {
+async function seedTestBookmarks() {
   try {
-    console.log('Preloading model...');
-    await ModelSingleton.getModelInstance();
-    await ModelSingleton.getTokenizerInstance();
-    console.log('Model preloaded successfully');
+    isSeeding = true; // Disable smart relocation
+    console.log('Seeding test bookmarks...');
+
+    // Create folders and bookmarks
+    const testData = [
+      {
+        folder: 'Vegetables',
+        bookmarks: [
+          { title: 'Carrot - Wikipedia', url: 'https://en.wikipedia.org/wiki/Carrot' },
+          { title: 'Broccoli - Wikipedia', url: 'https://en.wikipedia.org/wiki/Broccoli' }
+        ]
+      },
+      {
+        folder: 'Geography',
+        bookmarks: [
+          { title: 'Mount Everest - Wikipedia', url: 'https://en.wikipedia.org/wiki/Mount_Everest' },
+          { title: 'Amazon River - Wikipedia', url: 'https://en.wikipedia.org/wiki/Amazon_River' }
+        ]
+      },
+      {
+        folder: 'Celebrities',
+        bookmarks: [
+          { title: 'Albert Einstein - Wikipedia', url: 'https://en.wikipedia.org/wiki/Albert_Einstein' },
+          { title: 'Leonardo da Vinci - Wikipedia', url: 'https://en.wikipedia.org/wiki/Leonardo_da_Vinci' }
+        ]
+      },
+      {
+        folder: 'Science',
+        bookmarks: [
+          { title: 'Quantum mechanics - Wikipedia', url: 'https://en.wikipedia.org/wiki/Quantum_mechanics' },
+          { title: 'DNA - Wikipedia', url: 'https://en.wikipedia.org/wiki/DNA' }
+        ]
+      }
+    ];
+
+    for (const category of testData) {
+      // Create folder (omit url to create folder)
+      const folder = await browser.bookmarks.create({
+        title: category.folder
+      });
+
+      console.log(`Created folder: ${category.folder}`);
+
+      // Create bookmarks in folder
+      for (const bookmark of category.bookmarks) {
+        await browser.bookmarks.create({
+          title: bookmark.title,
+          url: bookmark.url,
+          parentId: folder.id
+        });
+        console.log(`  Added bookmark: ${bookmark.title}`);
+      }
+    }
+
+    console.log('Test bookmarks seeded successfully');
   } catch (error) {
-    console.error('Failed to preload model:', error);
+    console.error('Error seeding test bookmarks:', error);
+  } finally {
+    isSeeding = false; // Re-enable smart relocation
   }
 }
 
-// Start preloading immediately
-preloadModel();
+browser.runtime.onInstalled.addListener(async () => {
+  await preloadModel();
+  await seedTestBookmarks();
+  await initDestinationEmbeddings();
+});
+
+browser.runtime.onStartup.addListener(async () => {
+  await preloadModel();
+});
 
 browser.bookmarks.onCreated.addListener(handleCreated);
