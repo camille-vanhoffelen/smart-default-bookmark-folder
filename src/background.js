@@ -51,9 +51,16 @@ async function handleCreated(id, bookmarkInfo) {
 }
 
 async function handleChanged(id, changeInfo) {
+  const bookmarkNodes = await browser.bookmarks.get(id);
+  if (!bookmarkNodes || bookmarkNodes.length === 0) {
+    console.log(`Bookmark/folder with id ${id} not found`);
+    return;
+  }
   // folder title change
-  if (changeInfo.title !== undefined && changeInfo.url === undefined) {
-    console.log(`Folder name changed: re-embedding folder "${changeInfo.title}"`);
+  const bookmarkNode = bookmarkNodes[0];
+
+  if (bookmarkNode.type === 'folder' && changeInfo.title !== undefined) {
+    console.log(`Folder name changed: re-embedding folder with new title "${changeInfo.title}"`);
 
     const folderEmbeddings = await embedFolder(id);
     if (folderEmbeddings && (folderEmbeddings[EMBEDDING_TYPES.FOLDER_TITLE] || folderEmbeddings[EMBEDDING_TYPES.FOLDER_PATH])) {
@@ -65,7 +72,7 @@ async function handleChanged(id, changeInfo) {
   }
 
   // bookmark url change
-  if (changeInfo.url !== undefined) {
+  if (bookmarkNode.type === 'bookmark' && changeInfo.url !== undefined) {
     console.log(`Bookmark URL changed: re-embedding bookmark with new URL "${changeInfo.url}"`);
 
     const bookmarkEmbeddings = await embedBookmark(id);

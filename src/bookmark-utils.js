@@ -37,7 +37,7 @@ export async function getTabContent(tabId) {
     });
 
     if (response && response.textContent) {
-      console.log("Text content extracted:", response.textContent.substring(0, 100));
+      console.log("Text content extracted:", response.textContent.substring(0, 100).replace(/\s+/g, ' '));
       return response.textContent;
     }
     return null;
