@@ -3,9 +3,10 @@ import {
   embedBookmark,
   relocateBookmark,
   embedFolder,
+  syncDestinationEmbeddings,
   EMBEDDING_TYPES
 } from './bookmark-utils.js';
-import { saveEmbeddings, deleteEmbeddingsWithChildren } from './embedding.js';
+import { saveEmbeddings } from './embedding.js';
 import { preloadModel } from './model.js';
 import { seedTestBookmarks, getIsSeeding } from './seed.js';
 
@@ -23,7 +24,7 @@ async function handleCreated(id, bookmarkInfo) {
 
   if (bookmarkInfo.type === 'folder') {
     console.log(`New bookmark folder created: ${bookmarkInfo.title}`);
-    
+
     const folderEmbeddings = await embedFolder(id);
     if (folderEmbeddings && (folderEmbeddings[EMBEDDING_TYPES.FOLDER_TITLE] || folderEmbeddings[EMBEDDING_TYPES.FOLDER_PATH])) {
       await saveEmbeddings(id, folderEmbeddings);
@@ -53,6 +54,50 @@ async function handleCreated(id, bookmarkInfo) {
   }
 }
 
+async function handleChanged(id, changeInfo) {
+  // folder title change
+  if (changeInfo.title !== undefined && changeInfo.url === undefined) {
+    console.log(`Folder name changed: re-embedding folder "${changeInfo.title}"`);
+
+    const folderEmbeddings = await embedFolder(id);
+    if (folderEmbeddings && (folderEmbeddings[EMBEDDING_TYPES.FOLDER_TITLE] || folderEmbeddings[EMBEDDING_TYPES.FOLDER_PATH])) {
+      await saveEmbeddings(id, folderEmbeddings);
+      console.log(`Folder embeddings saved for new title "${changeInfo.title}"`);
+    } else {
+      console.log(`Failed to calculate folder embedding for title change, skipping`);
+    }
+  }
+
+  // bookmark url change
+  if (changeInfo.url !== undefined) {
+    console.log(`Bookmark URL changed: re-embedding bookmark with new URL "${changeInfo.url}"`);
+
+    const bookmarkEmbeddings = await embedBookmark(id);
+    if (bookmarkEmbeddings && bookmarkEmbeddings[EMBEDDING_TYPES.BOOKMARK_PAGE]) {
+      await saveEmbeddings(id, bookmarkEmbeddings);
+      console.log(`Bookmark embeddings saved for new URL "${changeInfo.url}"`);
+    } else {
+      console.log(`Failed to calculate bookmark embedding for URL change, skipping`);
+    }
+  }
+}
+
+async function handleMoved(id, moveInfo) {
+  const bookmark = await browser.bookmarks.get(id);
+  if (bookmark[0] && bookmark[0].type === 'folder') {
+    console.log(`Folder moved: re-embedding folder "${bookmark[0].title}"`);
+
+    const folderEmbeddings = await embedFolder(id);
+    if (folderEmbeddings && (folderEmbeddings[EMBEDDING_TYPES.FOLDER_TITLE] || folderEmbeddings[EMBEDDING_TYPES.FOLDER_PATH])) {
+      await saveEmbeddings(id, folderEmbeddings);
+      console.log(`Folder embeddings saved for moved folder "${bookmark[0].title}"`);
+    } else {
+      console.log(`Failed to calculate folder embedding for moved folder, skipping`);
+    }
+  }
+}
+
+
 
 browser.runtime.onInstalled.addListener(async () => {
   // TODO put this back
@@ -68,13 +113,10 @@ browser.runtime.onInstalled.addListener(async () => {
 browser.runtime.onStartup.addListener(async () => {
   // TODO put this back
   // await preloadModel();
+  await new Promise(resolve => setTimeout(resolve, 10000));
+  await syncDestinationEmbeddings();
 });
 
 browser.bookmarks.onCreated.addListener(handleCreated);
-
-async function handleRemoved(id, removeInfo) {
-  console.log(`Bookmark removed: ${id}`);
-  await deleteEmbeddingsWithChildren(id, removeInfo);
-}
-
-browser.bookmarks.onRemoved.addListener(handleRemoved);
+browser.bookmarks.onChanged.addListener(handleChanged);
+browser.bookmarks.onMoved.addListener(handleMoved);

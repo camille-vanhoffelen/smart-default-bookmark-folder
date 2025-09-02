@@ -1,4 +1,4 @@
-import { embed, isEnoughContent, saveAllEmbeddings, getEmbeddings } from './embedding.js';
+import { embed, isEnoughContent, saveAllEmbeddings, getEmbeddings, getStoredEmbeddingIds as getStoredBookmarkIds, deleteEmbeddings } from './embedding.js';
 import { Semaphore } from './async-utils.js';
 import { cos_sim } from '@huggingface/transformers';
 
@@ -369,4 +369,26 @@ export async function initDestinationEmbeddings() {
 
   await saveAllEmbeddings(embeddingStorage);
   console.log(`Done initialising destination embeddings`);
+}
+
+export async function syncDestinationEmbeddings() {
+  console.log('Starting sync of destination embeddings...');
+  // TODO still need to add missing embeddings
+  
+  // remove orphaned embeddings
+  const allNodes = await browser.bookmarks.search({});
+  const allNodeIds = new Set(allNodes.map(node => node.id));
+  console.log(`Found ${allNodeIds.size} bookmark/folder nodes`);
+  
+  const storedBookmarkIds = await getStoredBookmarkIds();
+  console.log(`Found ${storedBookmarkIds.length} embedding entries in storage`);
+  
+  const orphanedNodeIds = storedBookmarkIds.filter(id => !allNodeIds.has(id));
+  console.log(`Found ${orphanedNodeIds.length} orphaned embeddings`);
+  
+  if (orphanedNodeIds.length > 0) {
+    await deleteEmbeddings(orphanedNodeIds);
+  }
+  
+  console.log('Sync of destination embeddings completed');
 }

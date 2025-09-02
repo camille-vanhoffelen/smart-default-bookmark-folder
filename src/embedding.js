@@ -43,6 +43,10 @@ function getStorageKey(bookmarkId) {
   return `embedding_${bookmarkId}`;
 }
 
+export function getBookmarkId(storageKey) {
+  return storageKey.startsWith('embedding_') ? storageKey.slice(10) : null;
+}
+
 export async function saveAllEmbeddings(embeddingStorage) {
   // TODO error handling
   for (const [bookmarkId, embeddings] of Object.entries(embeddingStorage)) {
@@ -67,36 +71,20 @@ export async function getEmbeddings(bookmarkId) {
   return embeddings;
 }
 
-export async function deleteEmbeddings(bookmarkId) {
-  const key = getStorageKey(bookmarkId);
-  console.log(`Deleting embeddings for bookmark ${bookmarkId}`);
-  await browser.storage.local.remove(key);
-}
-
-export async function deleteEmbeddingsWithChildren(id, removeInfo) {
-  console.log('removeInfo:', removeInfo);
-  console.log(`Deleting embeddings for bookmark/folder ${id}`);
-  
-  // Delete embeddings for the removed bookmark/folder
-  await deleteEmbeddings(id);
-  
-  // If it was a folder, we need to clean up embeddings for all its descendants
-  // since Firefox only sends one notification for the parent folder
-  if (removeInfo.node && removeInfo.node.children) {
-    await deleteEmbeddingsRecursively(removeInfo.node.children);
-  }
-  
-  console.log(`Deleted embeddings for bookmark/folder ${id}`);
-}
-
-async function deleteEmbeddingsRecursively(children) {
-  for (const child of children) {
-    console.log(`Deleting embeddings for child: ${child.id}`);
-    await deleteEmbeddings(child.id);
-    
-    // If this child is also a folder with children, recurse
-    if (child.children && child.children.length > 0) {
-      await deleteEmbeddingsRecursively(child.children);
-    }
+export async function deleteEmbeddings(bookmarkIds) {
+  if (Array.isArray(bookmarkIds)) {
+    const keys = bookmarkIds.map(id => getStorageKey(id));
+    console.log(`Deleting embeddings for ${bookmarkIds.length} bookmarks:`, bookmarkIds);
+    await browser.storage.local.remove(keys);
+  } else {
+    const key = getStorageKey(bookmarkIds);
+    console.log(`Deleting embeddings for bookmark ${bookmarkIds}`);
+    await browser.storage.local.remove(key);
   }
 }
+
+export async function getStoredEmbeddingIds() {
+  const allStorage = await browser.storage.local.get();
+  return Object.keys(allStorage).map(key => getBookmarkId(key)).filter(id => id !== null);
+}
+
