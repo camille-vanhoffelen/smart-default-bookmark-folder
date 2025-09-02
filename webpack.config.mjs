@@ -9,8 +9,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default {
     mode: 'production',
     entry: {
-        background: './background.js',
-        content: './content.js'
+        background: './src/background.js',
+        content: './src/content.js'
     },
     output: {
         path: path.resolve(__dirname, 'build'),

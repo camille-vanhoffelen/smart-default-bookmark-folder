@@ -30,8 +30,16 @@ export class ModelSingleton {
 export async function preloadModel() {
   try {
     console.log('Preloading model...');
-    await ModelSingleton.getModelInstance();
-    await ModelSingleton.getTokenizerInstance();
+    const progress_callback = (progress) => console.log('Download progress:', progress);
+    
+    console.log('Loading model instance...');
+    await ModelSingleton.getModelInstance(progress_callback);
+    console.log('Model instance loaded');
+    
+    console.log('Loading tokenizer instance...');
+    await ModelSingleton.getTokenizerInstance(progress_callback);
+    console.log('Tokenizer instance loaded');
+    
     console.log('Model preloaded successfully');
   } catch (error) {
     console.error('Failed to preload model:', error);
