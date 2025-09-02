@@ -11,11 +11,6 @@ import { preloadModel } from './model.js';
 import { seedTestBookmarks, getIsSeeding } from './seed.js';
 
 async function handleCreated(id, bookmarkInfo) {
-  console.log(`New bookmark ID: ${id}`);
-  console.log(`New bookmark URL: ${bookmarkInfo.url}`);
-  console.log(`New bookmark title: ${bookmarkInfo.title}`);
-  console.log(`New bookmark parent ID: ${bookmarkInfo.parentId}`);
-
   // Skip during seeding
   if (getIsSeeding()) {
     console.log(`Skipping smart bookmark relocation: seeding`)
@@ -23,7 +18,7 @@ async function handleCreated(id, bookmarkInfo) {
   }
 
   if (bookmarkInfo.type === 'folder') {
-    console.log(`New bookmark folder created: ${bookmarkInfo.title}`);
+    console.log(`New folder created: ${bookmarkInfo.id}`);
 
     const folderEmbeddings = await embedFolder(id);
     if (folderEmbeddings && (folderEmbeddings[EMBEDDING_TYPES.FOLDER_TITLE] || folderEmbeddings[EMBEDDING_TYPES.FOLDER_PATH])) {
@@ -40,6 +35,7 @@ async function handleCreated(id, bookmarkInfo) {
     // TODO what if bookmark created for non-active tab? consider using URL instead? or bookmark info?
     // Maybe search in open tabs for that url, and if not found, then open it on your own?
     // Is that more robust than getting current open tab?
+    console.log(`New bookmark created: ${bookmarkInfo.id}`);
 
     const bookmarkEmbeddings = await embedBookmark(id);
     if (!bookmarkEmbeddings || !bookmarkEmbeddings[EMBEDDING_TYPES.BOOKMARK_PAGE]) {

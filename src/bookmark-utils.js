@@ -9,15 +9,25 @@ export const EMBEDDING_TYPES = {
   BOOKMARK_PAGE: 'bookmarkPage'
 };
 
-export async function getCurrentTabContent() {
-  const tabs = await browser.tabs.query({
-    currentWindow: true,
-    active: true,
-  });
-
-  if (tabs.length !== 1) return null;
-
-  return await getTabContent(tabs[0].id);
+export async function getBookmarkContent(bookmarkId) {
+  const bookmarkNodes = await browser.bookmarks.get(bookmarkId);
+  if (!bookmarkNodes || bookmarkNodes.length === 0) {
+    console.log('Bookmark not found');
+    return null;
+  }
+  
+  const bookmark = bookmarkNodes[0];
+  const bookmarkUrl = bookmark.url;
+  
+  // Try to find any open tab with matching URL
+  const matchingTabs = await browser.tabs.query({ url: bookmarkUrl });
+  if (matchingTabs.length > 0) {
+    return await getTabContent(matchingTabs[0].id);
+  }
+  
+  // Give up if no matching tab found
+  console.log('No matching tab found for bookmark URL');
+  return null;
 }
 
 export async function getTabContent(tabId) {
@@ -285,8 +295,7 @@ export async function embedFolder(bookmarkId) {
 }
 
 export async function embedBookmark(bookmarkId) {
-  // TODO consider using bookmarkId as more robust way to get current tab content
-  const content = await getCurrentTabContent();
+  const content = await getBookmarkContent(bookmarkId);
 
   if (!isEnoughContent(content)) {
     console.log('Not enough text content to embed bookmark');
