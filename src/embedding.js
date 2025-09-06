@@ -39,8 +39,8 @@ export function isEnoughContent(content) {
   return content && content.trim().replace(/\s+/g, '').length >= 3;
 }
 
-function getStorageKey(bookmarkId) {
-  return `embedding_${bookmarkId}`;
+function getStorageKey(bookmarkNodeId) {
+  return `embedding_${bookmarkNodeId}`;
 }
 
 export function getBookmarkId(storageKey) {
@@ -49,25 +49,25 @@ export function getBookmarkId(storageKey) {
 
 export async function saveAllEmbeddings(embeddingStorage) {
   // TODO error handling
-  for (const [bookmarkId, embeddings] of Object.entries(embeddingStorage)) {
-    const key = getStorageKey(bookmarkId);
+  for (const [bookmarkNodeId, embeddings] of Object.entries(embeddingStorage)) {
+    const key = getStorageKey(bookmarkNodeId);
     await browser.storage.local.set({ [key]: embeddings });
   }
 }
 
-export async function saveEmbeddings(bookmarkId, embeddings) {
+export async function saveEmbeddings(bookmarkNodeId, embeddings) {
   // TODO error handling
-  const key = getStorageKey(bookmarkId);
-  console.log(`Saving embeddings for bookmark ${bookmarkId}`);
+  const key = getStorageKey(bookmarkNodeId);
+  console.log(`Saving embeddings for bookmark node ${bookmarkNodeId}`);
   await browser.storage.local.set({ [key]: embeddings });
 }
 
-export async function getEmbeddings(bookmarkId) {
+export async function getEmbeddings(bookmarkNodeId) {
   // TODO error handling
-  const key = getStorageKey(bookmarkId);
+  const key = getStorageKey(bookmarkNodeId);
   const result = await browser.storage.local.get(key);
   const embeddings = result[key] || {};
-  console.log(`Retrieved embeddings for bookmark ${bookmarkId}`);
+  console.log(`Retrieved embeddings for bookmark node ${bookmarkNodeId}`);
   return embeddings;
 }
 

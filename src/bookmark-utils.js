@@ -1,4 +1,4 @@
-import { embed, isEnoughContent, saveAllEmbeddings, getEmbeddings, getStoredEmbeddingIds as getStoredBookmarkIds, deleteEmbeddings } from './embedding.js';
+import { embed, isEnoughContent, saveAllEmbeddings, getEmbeddings, getStoredEmbeddingIds as getStoredNodeIds, deleteEmbeddings } from './embedding.js';
 import { Semaphore } from './async-utils.js';
 import { cos_sim } from '@huggingface/transformers';
 
@@ -9,22 +9,22 @@ export const EMBEDDING_TYPES = {
   BOOKMARK_PAGE: 'bookmarkPage'
 };
 
-export async function getBookmarkContent(bookmarkId) {
+export async function getNewBookmarkContent(bookmarkId) {
   const bookmarkNodes = await browser.bookmarks.get(bookmarkId);
   if (!bookmarkNodes || bookmarkNodes.length === 0) {
     console.log('Bookmark not found');
     return null;
   }
-  
+
   const bookmark = bookmarkNodes[0];
   const bookmarkUrl = bookmark.url;
-  
+
   // Try to find any open tab with matching URL
   const matchingTabs = await browser.tabs.query({ url: bookmarkUrl });
   if (matchingTabs.length > 0) {
     return await getTabContent(matchingTabs[0].id);
   }
-  
+
   // Give up if no matching tab found
   console.log('No matching tab found for bookmark URL');
   return null;
@@ -54,7 +54,8 @@ export async function getDestinations(excludeId = null) {
     .filter(node => node.id !== excludeId)
     .map(node => ({
       id: node.id,
-      folderId: node.url ? node.parentId : node.id
+      folderId: node.url ? node.parentId : node.id,
+      title: node.title
     }));
 }
 
@@ -70,6 +71,7 @@ export async function getDestinationEmbeddings(excludeId) {
       if (embedding !== null && embedding !== undefined) {
         flattenedDestinations.push({
           id: destination.id,
+          title: destination.title,
           folderId: destination.folderId,
           embeddingType: embeddingType,
           embedding: embedding
@@ -122,17 +124,14 @@ export async function getFolderContents() {
 
 
 
-export async function getBookmarkContents(concurrencyLimit = 2) {
+export async function loadBookmarkContents(bookmarkNodes, concurrencyLimit = 3) {
   try {
-    const allNodes = await browser.bookmarks.search({});
-    const bookmarkNodes = allNodes.filter(node => node.url);
-
-    // Use semaphore to throttle concurrent getPageContent calls
+    // Use semaphore to throttle concurrent loadPageContent calls
     const semaphore = new Semaphore(concurrencyLimit);
 
     const contentPromises = bookmarkNodes.map(node =>
       semaphore.execute(async () => {
-        const pageContent = await getPageContent(node.url);
+        const pageContent = await loadPageContent(node.url);
         return {
           id: node.id,
           content: pageContent,
@@ -157,7 +156,7 @@ export async function getBookmarkContents(concurrencyLimit = 2) {
   }
 }
 
-export async function getPageContent(url) {
+export async function loadPageContent(url) {
   let tab = null;
   try {
     // Create a new tab (hidden/inactive)
@@ -169,7 +168,7 @@ export async function getPageContent(url) {
         console.warn(`Page load timed out for ${url}, extracting content from partially loaded page`);
         browser.tabs.onUpdated.removeListener(listener);
         resolve(); // Don't reject, just mark as timed out
-      }, 10000); // 10 second timeout
+      }, 5000); // 5 second timeout
 
       const listener = (tabId, changeInfo) => {
         if (tabId === tab.id && changeInfo.status === 'complete') {
@@ -294,8 +293,8 @@ export async function embedFolder(bookmarkId) {
   }
 }
 
-export async function embedBookmark(bookmarkId) {
-  const content = await getBookmarkContent(bookmarkId);
+export async function embedNewBookmark(bookmarkId) {
+  const content = await getNewBookmarkContent(bookmarkId);
 
   if (!isEnoughContent(content)) {
     console.log('Not enough text content to embed bookmark');
@@ -333,7 +332,7 @@ export async function relocateBookmark(bookmarkPageEmbedding, bookmarkId) {
   console.log('\n=== Top 30 most similar destinations ===');
   for (let i = 0; i < Math.min(30, similarities.length); i++) {
     const dest = similarities[i];
-    console.log(`${i + 1}. ${dest.id} (type: ${dest.embeddingType}, similarity: ${dest.similarity.toFixed(4)})`);
+    console.log(`${i + 1}. ${dest.id} (type: ${dest.embeddingType}, similarity: ${dest.similarity.toFixed(4)}, title: ${dest.title})`);
   }
 
   // Pick highest cosine similarity and relocate bookmark to that folderId
@@ -344,60 +343,105 @@ export async function relocateBookmark(bookmarkPageEmbedding, bookmarkId) {
   await browser.bookmarks.move(bookmarkId, { parentId: targetFolderId });
 }
 
-export async function initDestinationEmbeddings() {
-  console.log(`Init of destination embeddings`);
-  const bookmarks = await getBookmarkContents();
-  const folders = await getFolderContents();
-  const destinations = [...bookmarks, ...folders];
+async function removeOrphanedEmbeddings(allNodeIds, storedNodeIds) {
+  const orphanedNodeIds = storedNodeIds.filter(id => !allNodeIds.has(id));
+  console.log(`Found ${orphanedNodeIds.length} orphaned embeddings`);
 
-  console.log(`\n=== Total destination contents: ${destinations.length} ===`);
-
-  for (const destination of destinations) {
-    console.log(`destination: id=${destination.id}, type=${destination.type}, content="${destination.content?.substring(0, 100).replace(/\s+/g, ' ') || 'null'}"`);
+  if (orphanedNodeIds.length > 0) {
+    await deleteEmbeddings(orphanedNodeIds);
   }
+}
 
-  const allContents = destinations.map(item => item.content);
-  const embeddings = await embed(allContents);
+async function addMissingEmbeddings(allNodes, storedNodeIds) {
+  const storedNodeIdSet = new Set(storedNodeIds);
+  const missingNodes = allNodes.filter(node => !storedNodeIdSet.has(node.id));
 
-  const embeddingStorage = {};
-  for (let i = 0; i < destinations.length; i++) {
-    const embedding = embeddings[i];
-    if (embedding === null || embedding === undefined) {
-      continue;
+  console.log(`Found ${missingNodes.length} nodes without embeddings`);
+
+  if (missingNodes.length > 0) {
+    // Separate folders and bookmarks using node.type
+    const missingFolders = missingNodes.filter(node => node.type === 'folder');
+    const missingBookmarks = missingNodes.filter(node => node.type === 'bookmark');
+
+    console.log(`Processing ${missingFolders.length} folders and ${missingBookmarks.length} bookmarks`);
+
+    const destinations = [];
+
+    // folders
+    for (const folder of missingFolders) {
+      const title = folder.title;
+      const fullPath = await getFolderFullPathContent(folder);
+
+      if (isEnoughContent(title)) {
+        destinations.push({
+          id: folder.id,
+          content: title,
+          type: EMBEDDING_TYPES.FOLDER_TITLE,
+        });
+      }
+
+      if (isEnoughContent(fullPath)) {
+        destinations.push({
+          id: folder.id,
+          content: fullPath,
+          type: EMBEDDING_TYPES.FOLDER_PATH,
+        });
+      }
     }
 
-    const destination = destinations[i];
-    const id = destination.id;
-    const type = destination.type;
-
-    if (!embeddingStorage[id]) {
-      embeddingStorage[id] = {};
+    // bookmarks
+    const bookmarkContents = await loadBookmarkContents(missingBookmarks);
+    for (const bookmarkContent of bookmarkContents) {
+      destinations.push(bookmarkContent);
     }
-    embeddingStorage[id][type] = embedding;
-  }
 
-  await saveAllEmbeddings(embeddingStorage);
-  console.log(`Done initialising destination embeddings`);
+    console.log(`Total destination contents to embed: ${destinations.length}`);
+
+    if (destinations.length > 0) {
+      // Batch embed all content at once
+      const allContents = destinations.map(item => item.content);
+      const embeddings = await embed(allContents);
+
+      // Group embeddings by node ID
+      const embeddingStorage = {};
+      for (let i = 0; i < destinations.length; i++) {
+        const embedding = embeddings[i];
+        if (embedding === null || embedding === undefined) {
+          continue;
+        }
+
+        const destination = destinations[i];
+        const id = destination.id;
+        const type = destination.type;
+
+        if (!embeddingStorage[id]) {
+          embeddingStorage[id] = {};
+        }
+        embeddingStorage[id][type] = embedding;
+      }
+
+      // Save all embeddings
+      await saveAllEmbeddings(embeddingStorage);
+      console.log(`Saved embeddings for ${Object.keys(embeddingStorage).length} nodes`);
+    }
+  }
 }
 
 export async function syncDestinationEmbeddings() {
   console.log('Starting sync of destination embeddings...');
-  // TODO still need to add missing embeddings
-  
-  // remove orphaned embeddings
+
+  // Get IDs of all current bookmark nodes
   const allNodes = await browser.bookmarks.search({});
   const allNodeIds = new Set(allNodes.map(node => node.id));
   console.log(`Found ${allNodeIds.size} bookmark/folder nodes`);
-  
-  const storedBookmarkIds = await getStoredBookmarkIds();
-  console.log(`Found ${storedBookmarkIds.length} embedding entries in storage`);
-  
-  const orphanedNodeIds = storedBookmarkIds.filter(id => !allNodeIds.has(id));
-  console.log(`Found ${orphanedNodeIds.length} orphaned embeddings`);
-  
-  if (orphanedNodeIds.length > 0) {
-    await deleteEmbeddings(orphanedNodeIds);
-  }
-  
+
+  // Get IDs of all bookmark nodes with stored embeddings
+  const storedNodeIds = await getStoredNodeIds();
+  console.log(`Found ${storedNodeIds.length} embedding entries in storage`);
+
+  await removeOrphanedEmbeddings(allNodeIds, storedNodeIds);
+
+  await addMissingEmbeddings(allNodes, storedNodeIds);
+
   console.log('Sync of destination embeddings completed');
 }

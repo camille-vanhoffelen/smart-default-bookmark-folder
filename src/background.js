@@ -1,6 +1,5 @@
 import {
-  initDestinationEmbeddings,
-  embedBookmark,
+  embedNewBookmark,
   relocateBookmark,
   embedFolder,
   syncDestinationEmbeddings,
@@ -37,7 +36,7 @@ async function handleCreated(id, bookmarkInfo) {
     // Is that more robust than getting current open tab?
     console.log(`New bookmark created: ${bookmarkInfo.id}`);
 
-    const bookmarkEmbeddings = await embedBookmark(id);
+    const bookmarkEmbeddings = await embedNewBookmark(id);
     if (!bookmarkEmbeddings || !bookmarkEmbeddings[EMBEDDING_TYPES.BOOKMARK_PAGE]) {
       console.warn(`Failed to calculate bookmark embedding, skipping relocation`);
       return;
@@ -75,7 +74,7 @@ async function handleChanged(id, changeInfo) {
   if (bookmarkNode.type === 'bookmark' && changeInfo.url !== undefined) {
     console.log(`Bookmark URL changed: re-embedding bookmark with new URL "${changeInfo.url}"`);
 
-    const bookmarkEmbeddings = await embedBookmark(id);
+    const bookmarkEmbeddings = await embedNewBookmark(id);
     if (bookmarkEmbeddings && bookmarkEmbeddings[EMBEDDING_TYPES.BOOKMARK_PAGE]) {
       await saveEmbeddings(id, bookmarkEmbeddings);
       console.log(`Bookmark embeddings saved for new URL "${changeInfo.url}"`);
@@ -110,7 +109,7 @@ browser.runtime.onInstalled.addListener(async () => {
   await new Promise(resolve => setTimeout(resolve, 3000));
 
   await seedTestBookmarks();
-  await initDestinationEmbeddings();
+  await syncDestinationEmbeddings();
 });
 
 browser.runtime.onStartup.addListener(async () => {
