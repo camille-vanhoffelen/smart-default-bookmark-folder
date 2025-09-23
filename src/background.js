@@ -1,3 +1,8 @@
+/**
+ * Background script for smart bookmark folder extension.
+ * Handles bookmark events and makes content-aware default folder suggestions.
+ */
+
 import {
   embedNewBookmark,
   relocateBookmark,
@@ -9,6 +14,9 @@ import { saveEmbeddings } from './embedding.js';
 import { preloadModel } from './model.js';
 import { seedTestBookmarks, getIsSeeding } from './seed.js';
 
+/**
+ * Handles bookmark/folder creation. Embeds new items and relocates bookmarks to best folder.
+ */
 async function handleCreated(id, bookmarkInfo) {
   // Skip during seeding
   if (getIsSeeding()) {
@@ -46,6 +54,9 @@ async function handleCreated(id, bookmarkInfo) {
   }
 }
 
+/**
+ * Handles bookmark/folder changes. Re-embeds items when title or URL changes.
+ */
 async function handleChanged(id, changeInfo) {
   try {
     const bookmarkNodes = await browser.bookmarks.get(id);
@@ -77,6 +88,9 @@ async function handleChanged(id, changeInfo) {
   }
 }
 
+/**
+ * Handles folder moves. Re-embeds folder paths.
+ */
 async function handleMoved(id, moveInfo) {
   try {
     const bookmark = await browser.bookmarks.get(id);

@@ -1,3 +1,10 @@
+/**
+ * Popup UI for extension management - clear embeddings and sync data.
+ */
+
+/**
+ * Clears all stored embedding data from browser storage.
+ */
 async function clearAllEmbeddings() {
   const allStorage = await browser.storage.local.get();
   const embeddingKeys = Object.keys(allStorage).filter(key => key.startsWith('embedding_'));
@@ -6,8 +13,10 @@ async function clearAllEmbeddings() {
   return embeddingKeys.length;
 }
 
+/**
+ * Triggers background script to sync embedding data.
+ */
 async function syncDestinationEmbeddings() {
-  // Send message to background script to trigger sync
   try {
     const response = await browser.runtime.sendMessage({
       type: 'syncDestinationEmbeddings'
@@ -19,6 +28,9 @@ async function syncDestinationEmbeddings() {
   }
 }
 
+/**
+ * Sets up popup UI event listeners for clear and sync buttons.
+ */
 document.addEventListener('DOMContentLoaded', function() {
   const clearButton = document.getElementById('clear-button');
   const syncButton = document.getElementById('sync-button');

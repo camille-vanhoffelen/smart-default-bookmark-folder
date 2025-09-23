@@ -1,3 +1,6 @@
+/**
+ * Semaphore for controlling max concurrent async operations.
+ */
 export class Semaphore {
   constructor(maxConcurrency) {
     this.maxConcurrency = maxConcurrency;

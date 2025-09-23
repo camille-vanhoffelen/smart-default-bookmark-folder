@@ -1,6 +1,13 @@
+/**
+ * Text embedding generation and storage utilities using Transformers.js.
+ */
+
 import { Tensor } from '@huggingface/transformers';
 import { ModelSingleton } from './model.js';
 
+/**
+ * Custom error for embedding operations.
+ */
 export class EmbeddingError extends Error {
   constructor(message, originalError = null) {
     super(message);
@@ -9,15 +16,18 @@ export class EmbeddingError extends Error {
   }
 }
 
+/**
+ * Generates embeddings for array of texts using loaded model.
+ * Returns null for texts with insufficient content.
+ */
 export async function embed(texts) {
   if (!Array.isArray(texts) || texts.length === 0) {
     throw new Error('texts must be a non-empty array');
   }
 
   try {
-    // Filter out insufficient content and keep track of original indices
     const validTexts = [];
-    const indexMap = []; // maps validTexts index to original texts index
+    const indexMap = [];
     
     for (let i = 0; i < texts.length; i++) {
       if (isEnoughContent(texts[i])) {
@@ -26,7 +36,6 @@ export async function embed(texts) {
       }
     }
 
-    // If no valid texts, return array of nulls
     if (validTexts.length === 0) {
       return new Array(texts.length).fill(null);
     }
@@ -54,7 +63,6 @@ export async function embed(texts) {
     const { embeddings } = await model(modelInputs);
     const validEmbeddings = embeddings.tolist();
 
-    // Reconstruct result array with nulls for insufficient content
     const result = new Array(texts.length).fill(null);
     for (let i = 0; i < validEmbeddings.length; i++) {
       const originalIndex = indexMap[i];
@@ -67,6 +75,9 @@ export async function embed(texts) {
   }
 }
 
+/**
+ * Checks if content has minimum length for embedding.
+ */
 export function isEnoughContent(content) {
   return content && content.trim().replace(/\s+/g, '').length >= 3;
 }
@@ -112,6 +123,9 @@ export async function deleteEmbeddings(bookmarkNodeIds) {
   }
 }
 
+/**
+ * Gets all bookmark node IDs that have stored embeddings.
+ */
 export async function getStoredNodeIds() {
   const allStorage = await browser.storage.local.get();
   return Object.keys(allStorage).map(key => storageKeyToNodeId(key)).filter(id => id !== null);

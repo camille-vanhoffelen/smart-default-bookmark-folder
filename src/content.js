@@ -1,5 +1,12 @@
+/**
+ * Content script for extracting page text using Mozilla Readability.
+ */
+
 import { Readability } from '@mozilla/readability';
 
+/**
+ * Extracts clean text content from page using Readability.
+ */
 function extractTextContent() {
     try {
         var documentClone = document.cloneNode(true);
@@ -14,6 +21,9 @@ function extractTextContent() {
     }
 }
 
+/**
+ * Message listener for background script text content extraction requests.
+ */
 browser.runtime.onMessage.addListener((request) => {
     if (request.type === "extractTextContent") {
         console.log("Extracting page content")
