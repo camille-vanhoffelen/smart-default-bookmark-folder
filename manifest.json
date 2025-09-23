@@ -25,6 +25,10 @@
     "scripts": ["background.js"],
     "type": "module"
   },
+  "action": {
+    "default_title": "Smart Default Bookmark Folder",
+    "default_popup": "popup.html"
+  },
   "permissions": [
     "bookmarks",
     "activeTab",

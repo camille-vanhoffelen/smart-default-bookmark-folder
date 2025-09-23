@@ -117,3 +117,11 @@ export async function getStoredNodeIds() {
   return Object.keys(allStorage).map(key => storageKeyToNodeId(key)).filter(id => id !== null);
 }
 
+export async function clearAllEmbeddings() {
+  const allStorage = await browser.storage.local.get();
+  const embeddingKeys = Object.keys(allStorage).filter(key => key.startsWith('embedding_'));
+  await browser.storage.local.remove(embeddingKeys);
+  console.log(`Cleared ${embeddingKeys.length} embedding entries`);
+  return embeddingKeys.length;
+}
+

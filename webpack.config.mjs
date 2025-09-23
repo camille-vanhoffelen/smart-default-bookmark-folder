@@ -34,6 +34,18 @@ export default {
             {
                 from: "manifest.json",
                 to: "."
+            },
+            {
+                from: "src/popup.html",
+                to: "popup.html"
+            },
+            {
+                from: "src/popup.css",
+                to: "popup.css"
+            },
+            {
+                from: "src/popup.js",
+                to: "popup.js"
             }
         ],
     })

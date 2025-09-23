@@ -125,3 +125,15 @@ browser.runtime.onStartup.addListener(async () => {
 browser.bookmarks.onCreated.addListener(handleCreated);
 browser.bookmarks.onChanged.addListener(handleChanged);
 browser.bookmarks.onMoved.addListener(handleMoved);
+
+browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+  if (message.type === 'syncDestinationEmbeddings') {
+    try {
+      await syncDestinationEmbeddings();
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to sync destination embeddings:', error);
+      throw error;
+    }
+  }
+});
