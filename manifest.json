@@ -1,0 +1,53 @@
+{
+  "description": "Guesses the best folder for new bookmarks.",
+  "manifest_version": 3,
+  "name": "Smart Default Bookmark Folder",
+  "version": "1.0",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "smart-default-bookmark-folder@example.com"
+    }
+  },
+  "homepage_url": "https://github.com/camille-vanhoffelen/smart-default-bookmark-folder",
+  "icons": {
+    "16": "icons/logo.svg",
+    "24": "icons/logo.svg",
+    "32": "icons/logo.svg",
+    "48": "icons/logo.svg",
+    "64": "icons/logo.svg",
+    "96": "icons/logo.svg",
+    "128": "icons/logo.svg",
+    "256": "icons/logo.svg",
+    "512": "icons/logo.svg",
+    "1024": "icons/logo.svg"
+  },
+  "background": {
+    "scripts": ["background.js"],
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Smart Default Bookmark Folder",
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "bookmarks",
+    "activeTab",
+    "scripting",
+    "storage",
+    "unlimitedStorage",
+    "tabs",
+    "alarms"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
+}
