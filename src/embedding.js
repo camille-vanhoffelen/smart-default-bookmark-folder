@@ -106,7 +106,7 @@ export async function deleteEmbeddings(bookmarkNodeIds) {
     console.log(`Deleting embeddings for ${bookmarkNodeIds.length} bookmarks:`, bookmarkNodeIds);
     await browser.storage.local.remove(keys);
   } else {
-    const key = getStorageKey(bookmarkNodeIds);
+    const key = nodeIdToStorageKey(bookmarkNodeIds);
     console.log(`Deleting embeddings for bookmark ${bookmarkNodeIds}`);
     await browser.storage.local.remove(key);
   }

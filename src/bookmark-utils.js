@@ -9,6 +9,15 @@ export const EMBEDDING_TYPES = {
   BOOKMARK_PAGE: 'bookmarkPage'
 };
 
+// Firefox special bookmark folder IDs to exclude from path generation
+const EXCLUDED_FOLDER_IDS = new Set([
+  'unfiled_____',  // Other Bookmarks folder
+  'mobile______',  // Mobile Bookmarks folder
+  'menu________',  // Bookmarks Menu folder
+  'toolbar_____',  // Bookmarks Toolbar folder
+  'tags________'   // Tags folder
+]);
+
 export async function getNewBookmarkContent(bookmarkId) {
   const bookmarkNodes = await browser.bookmarks.get(bookmarkId);
   if (!bookmarkNodes || bookmarkNodes.length === 0) {
@@ -153,8 +162,8 @@ async function getFolderFullPathContent(folderNode) {
       const parentNodes = await browser.bookmarks.get(currentNode.parentId);
       if (parentNodes && parentNodes.length > 0) {
         const parentNode = parentNodes[0];
-        // Only add non-root folders (root folders typically have no title or system titles)
-        if (parentNode.title && parentNode.title.trim()) {
+        // Only add non-root folders and exclude special system folders
+        if (parentNode.title && parentNode.title.trim() && !EXCLUDED_FOLDER_IDS.has(parentNode.id)) {
           pathParts.unshift(parentNode.title);
         }
         currentNode = parentNode;
