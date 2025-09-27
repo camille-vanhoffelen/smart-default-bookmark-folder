@@ -10,11 +10,21 @@ export default {
     mode: 'production',
     entry: {
         background: './src/background.js',
-        content: './src/content.js'
+        content: './src/content.js',
+        popup: './src/popup.js'
     },
     output: {
         path: path.resolve(__dirname, 'build'),
         filename: '[name].js'
+    },
+    module: {
+        rules: [
+            {
+                test: /\.wasm$/,
+                type: 'javascript/auto',
+                use: 'ignore-loader'
+            }
+        ]
     },
     plugins: [new WebExtPlugin({ sourceDir: path.resolve(__dirname, 'build') }),
     new CopyPlugin({
@@ -22,6 +32,10 @@ export default {
             {
                 from: "icons",
                 to: "icons"
+            },
+            {
+                from: "manifest.json",
+                to: "."
             },
             {
                 from: 'node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.jsep.wasm',
@@ -32,20 +46,12 @@ export default {
                 to: 'static/wasm/[name][ext]'
             },
             {
-                from: "manifest.json",
-                to: "."
-            },
-            {
                 from: "src/popup.html",
                 to: "popup.html"
             },
             {
                 from: "src/popup.css",
                 to: "popup.css"
-            },
-            {
-                from: "src/popup.js",
-                to: "popup.js"
             }
         ],
     })

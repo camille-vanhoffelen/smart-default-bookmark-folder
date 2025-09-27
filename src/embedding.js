@@ -5,16 +5,6 @@
 import { Tensor } from '@huggingface/transformers';
 import { ModelSingleton } from './model.js';
 
-/**
- * Custom error for embedding operations.
- */
-export class EmbeddingError extends Error {
-  constructor(message, originalError = null) {
-    super(message);
-    this.name = 'EmbeddingError';
-    this.originalError = originalError;
-  }
-}
 
 /**
  * Generates embeddings for array of texts using loaded model.
@@ -71,7 +61,7 @@ export async function embed(texts) {
 
     return result;
   } catch (error) {
-    throw new EmbeddingError('Failed to generate embeddings', error);
+    throw new Error('Failed to generate embeddings', { cause: error });
   }
 }
 
