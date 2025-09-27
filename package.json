@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Guesses the best folder for new bookmarks.",
   "scripts": {
-    "build": "webpack",
+    "build": "webpack && npx web-ext build --source-dir=build --artifacts-dir=dist",
     "dev": "webpack --watch"
   },
   "type": "module",
@@ -11,8 +11,7 @@
   "license": "MIT",
   "dependencies": {
     "@huggingface/transformers": "^3.7.2",
-    "@mozilla/readability": "^0.6.0",
-    "jsdom": "^26.1.0"
+    "@mozilla/readability": "^0.6.0"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^13.0.1",

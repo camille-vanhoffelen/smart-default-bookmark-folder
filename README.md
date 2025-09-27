@@ -46,6 +46,14 @@ Run the extension in development mode:
 npm run dev
 ```
 
+### Packaging
+
+Package the extension:
+
+```bash
+npx web-ext build --source-dir=build
+```
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
