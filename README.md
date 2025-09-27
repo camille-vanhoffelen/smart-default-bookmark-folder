@@ -34,9 +34,12 @@ npm install
 ```
 
 2. Build the extension:
+
 ```bash
 npm run build
 ```
+
+This bundles all the necessary source code and files under `build/`, and packages the extension as a `.zip` under `dist/`.
 
 ### Development
 
@@ -44,14 +47,6 @@ Run the extension in development mode:
 
 ```bash
 npm run dev
-```
-
-### Packaging
-
-Package the extension:
-
-```bash
-npx web-ext build --source-dir=build
 ```
 
 ## 📄 License
