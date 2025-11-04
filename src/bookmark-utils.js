@@ -100,18 +100,28 @@ export async function getDestinationEmbeddings(excludeId) {
 /**
  * Loads page content for multiple bookmarks.
  * Uses semaphore to throttle concurrent loadPageContent calls
+ * Optionally reports progress via callback
  */
-export async function loadBookmarkContents(bookmarkNodes, concurrencyLimit = 3) {
+export async function loadBookmarkContents(bookmarkNodes, concurrencyLimit = 3, progressCallback = null) {
   const semaphore = new Semaphore(concurrencyLimit);
+  const results = [];
+  let completed = 0;
 
   const contentPromises = bookmarkNodes.map(node =>
     semaphore.execute(async () => {
       const pageContent = await loadPageContent(node.url);
-      return {
+      const result = {
         id: node.id,
         content: pageContent,
         type: EMBEDDING_TYPES.BOOKMARK_PAGE,
       };
+
+      completed++;
+      if (progressCallback) {
+        progressCallback(completed, bookmarkNodes.length);
+      }
+
+      return result;
     })
   );
 
@@ -305,8 +315,9 @@ async function removeOrphanedEmbeddings(allNodeIds, storedNodeIds) {
 
 /**
  * Creates embeddings for bookmarks/folders that don't have them.
+ * Optionally reports progress via callback
  */
-async function addMissingEmbeddings(allNodes, storedNodeIds) {
+async function addMissingEmbeddings(allNodes, storedNodeIds, progressCallback = null) {
   const storedNodeIdSet = new Set(storedNodeIds);
   const missingNodes = allNodes.filter(node => !storedNodeIdSet.has(node.id));
 
@@ -319,8 +330,9 @@ async function addMissingEmbeddings(allNodes, storedNodeIds) {
     console.log(`Processing ${missingFolders.length} folders and ${missingBookmarks.length} bookmarks`);
 
     const destinations = [];
+    let processedCount = 0;
 
-    // folders
+    // folders (these are fast, so we process them all at once)
     for (const folder of missingFolders) {
       const title = folder.title;
       const fullPath = await getFolderFullPathContent(folder);
@@ -336,10 +348,19 @@ async function addMissingEmbeddings(allNodes, storedNodeIds) {
         content: fullPath,
         type: EMBEDDING_TYPES.FOLDER_PATH,
       });
+
+      processedCount++;
+      if (progressCallback) {
+        progressCallback(processedCount, missingNodes.length);
+      }
     }
 
-    // bookmarks
-    const bookmarkContents = await loadBookmarkContents(missingBookmarks);
+    // bookmarks (these load pages, so we report progress)
+    const bookmarkContents = await loadBookmarkContents(missingBookmarks, 3, (current, total) => {
+      if (progressCallback) {
+        progressCallback(processedCount + current, missingNodes.length);
+      }
+    });
     for (const bookmarkContent of bookmarkContents) {
       destinations.push(bookmarkContent);
     }
@@ -371,8 +392,9 @@ async function addMissingEmbeddings(allNodes, storedNodeIds) {
 
 /**
  * Syncs embeddings with current bookmarks - removes orphaned, adds missing.
+ * Optionally reports progress via callback
  */
-export async function syncDestinationEmbeddings() {
+export async function syncDestinationEmbeddings(progressCallback = null) {
   console.log('Starting sync of destination embeddings...');
 
   const allNodes = await browser.bookmarks.search({});
@@ -384,7 +406,7 @@ export async function syncDestinationEmbeddings() {
 
   await removeOrphanedEmbeddings(allNodeIds, storedNodeIds);
 
-  await addMissingEmbeddings(allNodes, storedNodeIds);
+  await addMissingEmbeddings(allNodes, storedNodeIds, progressCallback);
 
   console.log('Sync of destination embeddings completed');
 }

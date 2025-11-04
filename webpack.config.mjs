@@ -11,7 +11,8 @@ export default {
     entry: {
         background: './src/background.js',
         content: './src/content.js',
-        popup: './src/popup.js'
+        popup: './src/popup.js',
+        onboarding: './src/onboarding.js'
     },
     output: {
         path: path.resolve(__dirname, 'build'),
@@ -52,6 +53,14 @@ export default {
             {
                 from: "src/popup.css",
                 to: "popup.css"
+            },
+            {
+                from: "src/onboarding.html",
+                to: "onboarding.html"
+            },
+            {
+                from: "src/onboarding.css",
+                to: "onboarding.css"
             }
         ],
     })

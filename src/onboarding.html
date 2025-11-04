@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Smart Default Bookmark Folder</title>
+  <link rel="stylesheet" href="onboarding.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="../icons/logo.svg" alt="Extension Logo" class="logo">
+      <h1>Welcome to Smart Default Bookmark Folder</h1>
+      <p class="subtitle">Automatically organize your bookmarks using machine learning</p>
+    </div>
+
+    <div class="content">
+      <div class="explanation">
+        <h2>How it works</h2>
+        <p>This extension analyzes your bookmarks and suggests the best folder for new ones based on their content.</p>
+        <p>To get started, we need to process your existing bookmarks to build an understanding of your bookmark organization.</p>
+      </div>
+
+      <div class="action-section" id="actionSection">
+        <button id="saveButton" class="primary-button">Save Bookmark Data</button>
+        <p class="note">This will load each bookmark to analyze its content. It may take a few minutes depending on how many bookmarks you have.</p>
+      </div>
+
+      <div class="progress-section hidden" id="progressSection">
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <p class="progress-text" id="progressText">Processing bookmarks...</p>
+          <p class="progress-count" id="progressCount">0 / 0</p>
+        </div>
+      </div>
+
+      <div class="complete-section hidden" id="completeSection">
+        <div class="success-message">
+          <h2>All set!</h2>
+          <p>Your bookmarks have been processed. The extension is now ready to help you organize your bookmarks.</p>
+          <button id="closeButton" class="primary-button">Get Started</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="onboarding.js"></script>
+</body>
+</html>

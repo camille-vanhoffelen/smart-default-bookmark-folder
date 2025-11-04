@@ -116,8 +116,11 @@ browser.runtime.onInstalled.addListener(async () => {
     // TODO remove delay
     await new Promise(resolve => setTimeout(resolve, 3000));
 
+    // Seed test bookmarks
     await seedTestBookmarks();
-    await syncDestinationEmbeddings();
+
+    // Open onboarding page instead of auto-syncing
+    await browser.tabs.create({ url: browser.runtime.getURL('onboarding.html') });
   } catch (error) {
     console.error('CRITICAL: Extension failed to initialize:', error);
     throw error;
@@ -147,6 +150,42 @@ browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       return { success: true };
     } catch (error) {
       console.error('Failed to sync destination embeddings:', error);
+      throw error;
+    }
+  }
+
+  if (message.type === 'START_ONBOARDING_SYNC') {
+    try {
+      // Get the tab ID of the onboarding page
+      const onboardingTabId = sender.tab?.id;
+
+      // Sync with progress reporting
+      await syncDestinationEmbeddings((current, total) => {
+        // Send progress updates to the onboarding page
+        if (onboardingTabId) {
+          browser.tabs.sendMessage(onboardingTabId, {
+            type: 'SYNC_PROGRESS',
+            current: current,
+            total: total
+          }).catch(err => {
+            // Ignore errors if tab is closed
+            console.warn('Could not send progress update:', err);
+          });
+        }
+      });
+
+      // Send completion message
+      if (onboardingTabId) {
+        browser.tabs.sendMessage(onboardingTabId, {
+          type: 'SYNC_COMPLETE'
+        }).catch(err => {
+          console.warn('Could not send completion message:', err);
+        });
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to sync during onboarding:', error);
       throw error;
     }
   }
