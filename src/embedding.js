@@ -97,7 +97,6 @@ export async function getEmbeddings(bookmarkNodeId) {
   const key = nodeIdToStorageKey(bookmarkNodeId);
   const result = await browser.storage.local.get(key);
   const embeddings = result[key] || {};
-  console.log(`Retrieved embeddings for bookmark node ${bookmarkNodeId}`);
   return embeddings;
 }
 
