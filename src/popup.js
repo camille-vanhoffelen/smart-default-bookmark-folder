@@ -76,16 +76,6 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   resetButton.addEventListener('click', async function() {
-    const confirmed = confirm(
-      "Reset will rebuild your bookmark index from scratch and may take several minutes.\n\n" +
-      "This is rarely needed. Only use if bookmark suggestions seem incorrect.\n\n" +
-      "Continue with reset?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     try {
       resetButton.disabled = true;
       syncButton.disabled = true;

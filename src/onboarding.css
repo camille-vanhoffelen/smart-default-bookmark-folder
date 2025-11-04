@@ -89,6 +89,33 @@ body {
   margin-bottom: 12px;
 }
 
+.tips-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tips-section li {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #666;
+  margin-bottom: 16px;
+  padding-left: 20px;
+  position: relative;
+}
+
+.tips-section li:last-child {
+  margin-bottom: 0;
+}
+
+.tips-section li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #333;
+  font-weight: bold;
+}
+
 .tips-section .setting-path {
   font-family: 'Courier New', Courier, monospace;
   font-size: 13px;
@@ -97,6 +124,7 @@ body {
   padding: 8px 12px;
   border: 1px solid #ddd;
   display: inline-block;
+  margin-top: 8px;
 }
 
 .action-section {
