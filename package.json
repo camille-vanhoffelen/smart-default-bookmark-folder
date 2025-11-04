@@ -1,6 +1,6 @@
 {
   "name": "smart-default-bookmark-folder",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Guesses the best folder for new bookmarks.",
   "scripts": {
     "build": "webpack && npx web-ext build --source-dir=build --artifacts-dir=dist --overwrite-dest",

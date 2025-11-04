@@ -2,7 +2,7 @@
   "description": "Guesses the best folder for new bookmarks.",
   "manifest_version": 3,
   "name": "Smart Default Bookmark Folder",
-  "version": "1.0",
+  "version": "0.1",
   "browser_specific_settings": {
     "gecko": {
       "id": "smart-default-bookmark-folder@example.com"

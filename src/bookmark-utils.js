@@ -287,12 +287,12 @@ export async function relocateBookmark(bookmarkPageEmbedding, bookmarkId) {
 
   similarities.sort((a, b) => b.similarity - a.similarity);
 
-  // TODO remove this logging
-  console.log('\n=== Top 30 most similar destinations ===');
-  for (let i = 0; i < Math.min(30, similarities.length); i++) {
-    const dest = similarities[i];
-    console.log(`${i + 1}. ${dest.id} (type: ${dest.embeddingType}, similarity: ${dest.similarity.toFixed(4)}, title: ${dest.title})`);
-  }
+  // Log top 5 matches for debugging bookmark placement
+  console.log(`Top 5 matches for bookmark:`,
+    similarities.slice(0, 5).map((d, i) =>
+      `${i+1}. ${d.title} [${d.embeddingType}] (${d.similarity.toFixed(3)})`
+    ).join(', ')
+  );
 
   const bestMatch = similarities[0];
   const targetFolderId = bestMatch.folderId;
@@ -388,6 +388,27 @@ async function addMissingEmbeddings(allNodes, storedNodeIds, progressCallback = 
       console.log(`Saved embeddings for ${Object.keys(embeddingStorage).length} nodes`);
     }
   }
+}
+
+/**
+ * Gets the current sync status by comparing bookmarks with stored embeddings.
+ * Returns sync statistics including total bookmarks and whether data is in sync.
+ */
+export async function getSyncStatus() {
+  const allNodes = await browser.bookmarks.search({});
+  const allNodeIds = new Set(allNodes.map(node => node.id));
+
+  const storedNodeIds = await getStoredNodeIds();
+  const storedNodeIdSet = new Set(storedNodeIds);
+
+  const missingNodes = allNodes.filter(node => !storedNodeIdSet.has(node.id));
+  const orphanedIds = storedNodeIds.filter(id => !allNodeIds.has(id));
+
+  return {
+    totalBookmarks: allNodeIds.size,
+    syncedBookmarks: Math.max(0, storedNodeIds.length - orphanedIds.length),
+    isSynced: missingNodes.length === 0 && orphanedIds.length === 0
+  };
 }
 
 /**

@@ -8,22 +8,16 @@ import {
   relocateBookmark,
   embedFolder,
   syncDestinationEmbeddings,
+  getSyncStatus,
   EMBEDDING_TYPES
 } from './bookmark-utils.js';
-import { saveEmbeddings } from './embedding.js';
+import { saveEmbeddings, deleteEmbeddings } from './embedding.js';
 import { preloadModel } from './model.js';
-import { seedTestBookmarks, getIsSeeding } from './seed.js';
 
 /**
  * Handles bookmark/folder creation. Embeds new items and relocates bookmarks to best folder.
  */
 async function handleCreated(id, bookmarkInfo) {
-  // Skip during seeding
-  if (getIsSeeding()) {
-    console.log(`Skipping smart bookmark relocation: seeding`)
-    return;
-  }
-
   if (bookmarkInfo.type === 'folder') {
     try {
       console.log(`New folder created: ${bookmarkInfo.id}, ${bookmarkInfo.title}`);
@@ -106,21 +100,33 @@ async function handleMoved(id, moveInfo) {
   }
 }
 
-
-
-browser.runtime.onInstalled.addListener(async () => {
+/**
+ * Handles bookmark/folder removal. Deletes associated embeddings.
+ */
+async function handleRemoved(id, removeInfo) {
   try {
-    // TODO put this back
-    // await preloadModel();
+    console.log(`Bookmark/folder removed: ${id}, deleting embeddings`);
+    await deleteEmbeddings([id]);
+    console.log(`Embeddings deleted for removed bookmark/folder ${id}`);
+  } catch (error) {
+    console.error(`Failed to delete embeddings for removed bookmark/folder, skipping:`, error);
+  }
+}
+
+
+
+browser.runtime.onInstalled.addListener(async (details) => {
+  try {
+    await preloadModel();
 
     // TODO remove delay
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Seed test bookmarks
-    await seedTestBookmarks();
-
-    // Open onboarding page instead of auto-syncing
-    await browser.tabs.create({ url: browser.runtime.getURL('onboarding.html') });
+    if (details.reason === 'install') {
+      await browser.tabs.create({ url: browser.runtime.getURL('onboarding.html') });
+    } else if (details.reason === 'update') {
+      await syncDestinationEmbeddings();
+    }
   } catch (error) {
     console.error('CRITICAL: Extension failed to initialize:', error);
     throw error;
@@ -129,10 +135,10 @@ browser.runtime.onInstalled.addListener(async () => {
 
 browser.runtime.onStartup.addListener(async () => {
   try {
-    // TODO put this back
-    // await preloadModel();
-    await new Promise(resolve => setTimeout(resolve, 10000));
-    await syncDestinationEmbeddings();
+    await preloadModel();
+    // TODO remove
+    // await new Promise(resolve => setTimeout(resolve, 10000));
+    // await syncDestinationEmbeddings();
   } catch (error) {
     console.error('CRITICAL: Extension failed to start up:', error);
     throw error;
@@ -142,9 +148,20 @@ browser.runtime.onStartup.addListener(async () => {
 browser.bookmarks.onCreated.addListener(handleCreated);
 browser.bookmarks.onChanged.addListener(handleChanged);
 browser.bookmarks.onMoved.addListener(handleMoved);
+browser.bookmarks.onRemoved.addListener(handleRemoved);
 
 browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-  if (message.type === 'syncDestinationEmbeddings') {
+  if (message.type === 'GET_SYNC_STATUS') {
+    try {
+      const status = await getSyncStatus();
+      return status;
+    } catch (error) {
+      console.error('Failed to get sync status:', error);
+      throw error;
+    }
+  }
+
+  if (message.type === 'SYNC_DESTINATION_EMBEDDINGS') {
     try {
       await syncDestinationEmbeddings();
       return { success: true };
@@ -156,25 +173,20 @@ browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 
   if (message.type === 'START_ONBOARDING_SYNC') {
     try {
-      // Get the tab ID of the onboarding page
       const onboardingTabId = sender.tab?.id;
 
-      // Sync with progress reporting
       await syncDestinationEmbeddings((current, total) => {
-        // Send progress updates to the onboarding page
         if (onboardingTabId) {
           browser.tabs.sendMessage(onboardingTabId, {
             type: 'SYNC_PROGRESS',
             current: current,
             total: total
           }).catch(err => {
-            // Ignore errors if tab is closed
             console.warn('Could not send progress update:', err);
           });
         }
       });
 
-      // Send completion message
       if (onboardingTabId) {
         browser.tabs.sendMessage(onboardingTabId, {
           type: 'SYNC_COMPLETE'

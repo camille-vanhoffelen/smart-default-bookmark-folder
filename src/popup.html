@@ -10,8 +10,11 @@
       <img src="icons/logo.svg" alt="Extension Logo" class="logo">
       <h3>Smart Default Bookmark Folder</h3>
     </div>
-    <button id="sync-button">Refresh Bookmark Data</button>
-    <button id="clear-button">Clear Bookmark Data</button>
+    <div id="sync-status" class="sync-status">
+      <span id="sync-indicator"></span>
+    </div>
+    <button id="sync-button">Sync Bookmark Data</button>
+    <button id="reset-button" title="Saves all your bookmarks from scratch. Rarely needed - use if suggestions seem incorrect.">Reset Bookmark Data</button>
     <div id="status" class="status"></div>
   </div>
   <script src="popup.js"></script>
