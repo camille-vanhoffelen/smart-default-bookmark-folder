@@ -67,7 +67,6 @@ document.addEventListener('DOMContentLoaded', async function() {
   const syncButton = document.getElementById('sync-button');
   const status = document.getElementById('status');
 
-  // Load and display initial sync status
   try {
     const syncStatus = await getSyncStatus();
     updateSyncStatusDisplay(syncStatus);
@@ -76,9 +75,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('sync-indicator').textContent = 'Unable to load sync status';
   }
 
-  // Reset button: clears and re-syncs all bookmark data
   resetButton.addEventListener('click', async function() {
-    // Ask for confirmation before proceeding
     const confirmed = confirm(
       "Reset will rebuild your bookmark index from scratch and may take several minutes.\n\n" +
       "This is rarely needed. Only use if bookmark suggestions seem incorrect.\n\n" +
@@ -86,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     );
 
     if (!confirmed) {
-      return; // User cancelled, do nothing
+      return;
     }
 
     try {
@@ -94,20 +91,16 @@ document.addEventListener('DOMContentLoaded', async function() {
       syncButton.disabled = true;
       status.textContent = 'Resetting...';
 
-      // Clear all embeddings
       const clearedCount = await clearAllEmbeddings();
       console.log(`Cleared ${clearedCount} bookmark data points`);
 
-      // Update status to show data is cleared
       const statusAfterClear = await getSyncStatus();
       updateSyncStatusDisplay(statusAfterClear);
 
       status.textContent = 'Re-syncing...';
 
-      // Re-sync all bookmarks
       await syncDestinationEmbeddings();
 
-      // Update status display
       const finalStatus = await getSyncStatus();
       updateSyncStatusDisplay(finalStatus);
 
@@ -124,7 +117,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   });
 
-  // Sync button: syncs bookmark data
   syncButton.addEventListener('click', async function() {
     try {
       resetButton.disabled = true;
@@ -133,7 +125,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
       await syncDestinationEmbeddings();
 
-      // Update status display
       const syncStatus = await getSyncStatus();
       updateSyncStatusDisplay(syncStatus);
 

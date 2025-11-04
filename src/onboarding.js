@@ -8,7 +8,6 @@ const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
 const progressCount = document.getElementById('progressCount');
 
-// Listen for progress updates from background script
 browser.runtime.onMessage.addListener((message) => {
   if (message.type === 'SYNC_PROGRESS') {
     updateProgress(message.current, message.total);
@@ -17,17 +16,13 @@ browser.runtime.onMessage.addListener((message) => {
   }
 });
 
-// Handle "Save Bookmark Data" button click
 saveButton.addEventListener('click', async () => {
-  // Hide action section, show progress section
   actionSection.classList.add('hidden');
   progressSection.classList.remove('hidden');
   progressSection.classList.add('fade-in');
 
-  // Disable button
   saveButton.disabled = true;
 
-  // Send message to background script to start sync
   try {
     await browser.runtime.sendMessage({ type: 'START_ONBOARDING_SYNC' });
   } catch (error) {
@@ -37,12 +32,10 @@ saveButton.addEventListener('click', async () => {
   }
 });
 
-// Handle "Get Started" button click
 closeButton.addEventListener('click', () => {
   window.close();
 });
 
-// Update progress bar and text
 function updateProgress(current, total) {
   const percentage = total > 0 ? (current / total) * 100 : 0;
 
@@ -51,7 +44,6 @@ function updateProgress(current, total) {
   progressCount.textContent = `${current} / ${total}`;
 }
 
-// Show completion message
 function showComplete() {
   progressSection.classList.add('hidden');
   completeSection.classList.remove('hidden');

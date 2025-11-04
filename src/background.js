@@ -119,9 +119,6 @@ browser.runtime.onInstalled.addListener(async (details) => {
   try {
     await preloadModel();
 
-    // TODO remove delay
-    // await new Promise(resolve => setTimeout(resolve, 3000));
-
     if (details.reason === 'install') {
       await browser.tabs.create({ url: browser.runtime.getURL('onboarding.html') });
     } else if (details.reason === 'update') {
@@ -136,9 +133,6 @@ browser.runtime.onInstalled.addListener(async (details) => {
 browser.runtime.onStartup.addListener(async () => {
   try {
     await preloadModel();
-    // TODO remove
-    // await new Promise(resolve => setTimeout(resolve, 10000));
-    // await syncDestinationEmbeddings();
   } catch (error) {
     console.error('CRITICAL: Extension failed to start up:', error);
     throw error;

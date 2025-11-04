@@ -27,7 +27,14 @@ export default {
             }
         ]
     },
-    plugins: [new WebExtPlugin({ sourceDir: path.resolve(__dirname, 'build') }),
+    plugins: [new WebExtPlugin({
+        sourceDir: path.resolve(__dirname, 'build'),
+        pref: {
+            // Force English UI and content
+            'intl.locale.requested': 'en-US',
+            'intl.accept_languages': 'en-US, en'
+        }
+    }),
     new CopyPlugin({
         patterns: [
             {

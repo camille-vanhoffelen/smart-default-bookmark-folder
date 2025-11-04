@@ -11,8 +11,11 @@ export const EMBEDDING_TYPES = {
   FOLDER_TITLE: 'folderTitle',
   BOOKMARK_PAGE: 'bookmarkPage'
 };
+const FOLDER_IDS_EXCLUDED_FROM_BOOKMARKS = new Set([
+  'tags________'   // Tags folder
+]);
 
-const EXCLUDED_FOLDER_IDS = new Set([
+const FOLDER_IDS_EXCLUDED_FROM_FULL_PATH_CONTENT = new Set([
   'unfiled_____',  // Other Bookmarks folder
   'mobile______',  // Mobile Bookmarks folder
   'menu________',  // Bookmarks Menu folder
@@ -60,7 +63,7 @@ export async function getTabContent(tabId) {
  * Gets all bookmarks/folders as potential destinations, excluding specified ID.
  */
 export async function getDestinations(excludeId = null) {
-  const allNodes = await browser.bookmarks.search({});
+  const allNodes = await getAllBookmarkNodes();
 
   return allNodes
     .filter(node => node.id !== excludeId)
@@ -134,10 +137,8 @@ export async function loadBookmarkContents(bookmarkNodes, concurrencyLimit = 3, 
 export async function loadPageContent(url) {
   let tab = null;
   try {
-    // Create a new tab (hidden/inactive)
     tab = await browser.tabs.create({ url, active: false });
 
-    // Wait for page to load
     await new Promise((resolve) => {
       const timeout = setTimeout(() => {
         console.warn(`Page load timed out for ${url}, extracting content from partially loaded page`);
@@ -195,7 +196,7 @@ async function getFolderFullPathContent(folderNode) {
       const parentNodes = await browser.bookmarks.get(currentNode.parentId);
       if (parentNodes && parentNodes.length > 0) {
         const parentNode = parentNodes[0];
-        if (parentNode.title && parentNode.title.trim() && !EXCLUDED_FOLDER_IDS.has(parentNode.id)) {
+        if (parentNode.title && parentNode.title.trim() && !FOLDER_IDS_EXCLUDED_FROM_FULL_PATH_CONTENT.has(parentNode.id)) {
           pathParts.unshift(parentNode.title);
         }
         currentNode = parentNode;
@@ -287,7 +288,6 @@ export async function relocateBookmark(bookmarkPageEmbedding, bookmarkId) {
 
   similarities.sort((a, b) => b.similarity - a.similarity);
 
-  // Log top 5 matches for debugging bookmark placement
   console.log(`Top 5 matches for bookmark:`,
     similarities.slice(0, 5).map((d, i) =>
       `${i+1}. ${d.title} [${d.embeddingType}] (${d.similarity.toFixed(3)})`
@@ -391,11 +391,22 @@ async function addMissingEmbeddings(allNodes, storedNodeIds, progressCallback = 
 }
 
 /**
+ * Gets all bookmark and folder nodes, excluding specified system folders.
+ * e.g Tags folder.
+ */
+async function getAllBookmarkNodes() {
+  const allNodes = await browser.bookmarks.search({});
+  const filteredNodes = allNodes.filter(node => !FOLDER_IDS_EXCLUDED_FROM_BOOKMARKS.has(node.id));
+  console.log(`Found ${filteredNodes.length} bookmark/folder nodes`);
+  return filteredNodes;
+}
+
+/**
  * Gets the current sync status by comparing bookmarks with stored embeddings.
  * Returns sync statistics including total bookmarks and whether data is in sync.
  */
 export async function getSyncStatus() {
-  const allNodes = await browser.bookmarks.search({});
+  const allNodes = await getAllBookmarkNodes();
   const allNodeIds = new Set(allNodes.map(node => node.id));
 
   const storedNodeIds = await getStoredNodeIds();
@@ -418,9 +429,8 @@ export async function getSyncStatus() {
 export async function syncDestinationEmbeddings(progressCallback = null) {
   console.log('Starting sync of destination embeddings...');
 
-  const allNodes = await browser.bookmarks.search({});
+  const allNodes = await getAllBookmarkNodes();
   const allNodeIds = new Set(allNodes.map(node => node.id));
-  console.log(`Found ${allNodeIds.size} bookmark/folder nodes`);
 
   const storedNodeIds = await getStoredNodeIds();
   console.log(`Found ${storedNodeIds.length} embedding entries in storage`);
