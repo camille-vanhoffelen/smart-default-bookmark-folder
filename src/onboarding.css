@@ -45,6 +45,13 @@ body {
   color: #666;
 }
 
+.motto {
+  font-size: 13px;
+  color: #999;
+  font-style: italic;
+  margin-top: 8px;
+}
+
 .content {
   padding: 30px;
 }
