@@ -5,7 +5,12 @@
   "version": "0.1",
   "browser_specific_settings": {
     "gecko": {
-      "id": "smart-default-bookmark-folder@example.com"
+      "id": "@smart-default-bookmark-folder",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
     }
   },
   "homepage_url": "https://github.com/camille-vanhoffelen/smart-default-bookmark-folder",
@@ -22,7 +27,9 @@
     "1024": "icons/logo.svg"
   },
   "background": {
-    "scripts": ["background.js"],
+    "scripts": [
+      "background.js"
+    ],
     "type": "module"
   },
   "action": {
@@ -44,8 +51,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ]
     }
   ]
 }
