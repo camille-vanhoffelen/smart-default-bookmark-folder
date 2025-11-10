@@ -31,12 +31,10 @@
   },
   "permissions": [
     "bookmarks",
-    "activeTab",
     "scripting",
     "storage",
     "unlimitedStorage",
-    "tabs",
-    "alarms"
+    "tabs"
   ],
   "host_permissions": [
     "<all_urls>"
