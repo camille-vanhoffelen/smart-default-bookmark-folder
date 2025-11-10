@@ -12,19 +12,21 @@ A Firefox browser extension that automatically suggests the best folder for new 
 
 ## 🛠️ How It Works
 
-1. **Content Extraction**: When you bookmark a page, the extension extracts clean text content using Mozilla Readability
-2. **Embeddings Inference**: Calculates furiously fast [potion static embeddings](https://huggingface.co/minishlab/potion-base-8M) with Transformers.js
-3. **Storage**: Embeddings are stored locally in browser storage, keyed by bookmark/folder ID for fast retrieval
-4. **Similarity Matching**: Compares new bookmark content against existing folder and bookmark embeddings using cosine similarity
-5. **Smart Relocation**: Automatically moves the bookmark to the folder with the highest content similarity
+When you bookmark a page, the extension extracts clean text content using Mozilla Readability.
+It then calculates furiously fast [potion static embeddings](https://huggingface.co/minishlab/potion-base-8M) with Transformers.js
+The embeddings are stored locally in browser storage, keyed by bookmark/folder ID for fast retrieval.
+When you create a new bookmark, its content is compared against existing folder and bookmark embeddings using cosine similarity.
+Finally, the new bookmark is automatically moved to the best matching folder.
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- [Node.js 18+ and npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
 - Firefox browser for development
 - `web-ext` CLI tool for Firefox development
+
+This build was only tested on macos 15.6.1.
 
 ### Installation
 
