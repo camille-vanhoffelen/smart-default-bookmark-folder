@@ -26,7 +26,7 @@ Finally, the new bookmark is automatically moved to the best matching folder.
 - Firefox browser for development
 - `web-ext` CLI tool for Firefox development
 
-This build was only tested on macos 15.6.1.
+This build was only tested on macos 15.6.1, with node v24.4.1, and npm v11.4.2
 
 ### Installation
 
