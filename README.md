@@ -6,9 +6,9 @@ A Firefox browser extension that automatically suggests the best folder for new 
 
 ## ✨ Features
 
-- **Content-Aware Matching**: Uses embeddings to compare bookmark contents, titles, and paths
-- **Real-time Processing**: Processes new bookmarks near-instantly
-- **Privacy-First**: All ML inference is done in the browser using Transformers.js
+- **Smart**: Uses embeddings to compare bookmark contents, titles, and paths
+- **Fast**: Processes new bookmarks near-instantly
+- **Private**: ML runs in your browser using Transformers.js
 
 ## 🛠️ How It Works
 
