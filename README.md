@@ -2,7 +2,7 @@
 
 > Sometimes saves you two clicks!
 
-A Firefox browser extension that automatically suggests the best folder for new bookmarks.
+A Firefox browser extension that automatically puts new bookmarks in the most fitting folder.
 
 ## ✨ Features
 
