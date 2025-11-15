@@ -4,6 +4,11 @@
 
 A Firefox browser extension that automatically puts new bookmarks in the best matching folder.
 
+
+<a href="https://addons.mozilla.org/en-US/firefox/addon/smart-default-bookmark-folder/">
+<img border="0" src="./assets/firefox-get-the-addon.png" width="300">
+</a>
+
 ## ✨ Features
 
 - **Smart**: Uses embeddings to compare bookmark contents, titles, and paths
