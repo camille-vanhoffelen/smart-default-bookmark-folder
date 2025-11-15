@@ -1,6 +1,6 @@
 # <img src="icons/logo.svg" width="48" height="48" alt="Smart Default Bookmark Folder Icon"> Smart Default Bookmark Folder
 
-> Sometimes saves you two clicks!
+> Sometimes saves you three clicks!
 
 A Firefox browser extension that automatically puts new bookmarks in the best matching folder.
 
